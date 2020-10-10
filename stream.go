@@ -96,7 +96,6 @@ func (m *Stream) Stream() error {
 				fatalErr <- errors.Wrap(err, "read err")
 				return
 			}
-			log.Print(string(message))
 			if err := m.handler.Handle(message); err != nil {
 				fatalErr <- errors.Wrap(err, "review err")
 				return

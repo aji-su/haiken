@@ -15,6 +15,9 @@ type Status struct {
 	Reblog      map[string]interface{} `json:"reblog"`
 	SpoilerText string                 `json:"spoiler_text"`
 	Tags        []*Tag                 `json:"tags"`
+	Mentions    []struct {
+		ID string `json:"id"`
+	} `json:"mentions"`
 }
 
 type Account struct {
@@ -31,4 +34,5 @@ type Notification struct {
 	ID      string   `json:"id"`
 	Type    string   `json:"type"`
 	Account *Account `json:"account"`
+	Status  *Status  `json:"status"`
 }

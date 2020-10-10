@@ -34,12 +34,29 @@ func (h *Haiken) Handle(message []byte) error {
 	}
 	switch m.Event {
 	case "update":
-		var p *Status
-		if err := json.Unmarshal([]byte(m.Payload), &p); err != nil {
+		var s *Status
+		if err := json.Unmarshal([]byte(m.Payload), &s); err != nil {
 			return err
 		}
-		if err := h.review(p); err != nil {
-			log.Printf("review err: %s", err)
+		if s.Account.ID == h.account.ID {
+			log.Printf("skip own post")
+			return nil
+		}
+		if s.Reblog != nil {
+			log.Printf("skip reblog")
+			return nil
+		}
+		if s.Visibility != "public" && s.Visibility != "unlisted" {
+			log.Printf("skip private post")
+			return nil
+		}
+		for _, m := range s.Mentions {
+			if m.ID == h.account.ID {
+				return h.handleMention(s)
+			}
+		}
+		if err := h.review(s, false); err != nil {
+			return errors.Wrap(err, "review err")
 		}
 	case "notification":
 		var p *Notification
@@ -47,8 +64,8 @@ func (h *Haiken) Handle(message []byte) error {
 			return err
 		}
 		if p.Type == "follow" {
-			if err := h.follow(p.Account); err != nil {
-				log.Printf("follow err: %s", err)
+			if err := h.rest.Follow(p.Account.ID, true); err != nil {
+				return errors.Wrap(err, "follow err")
 			}
 		}
 	case "delete":
@@ -58,24 +75,16 @@ func (h *Haiken) Handle(message []byte) error {
 	return nil
 }
 
-func (h *Haiken) review(s *Status) error {
-	if s.Account.ID == h.account.ID {
-		log.Printf("skip own post")
-		return nil
-	}
-	if s.Reblog != nil {
-		log.Printf("skip reblog")
-		return nil
-	}
-	if s.Visibility != "public" && s.Visibility != "unlisted" {
-		log.Printf("skip private post")
-		return nil
-	}
+func (h *Haiken) review(s *Status, force bool) error {
 	con := strip.StripTags(s.Content)
-	log.Print("con: ", con)
 	nodes, songs, err := h.reviewer.Search(con)
 	if err != nil {
 		return errors.Wrap(err, "failed to review")
+	}
+	if force && len(songs) < 1 {
+		if err := h.sendDetail(nodes, s.Account.Acct, s.ID); err != nil {
+			return errors.Wrap(err, "sendDetail err")
+		}
 	}
 	if len(songs) > 0 {
 		resBody, err := h.sendReport(nodes, songs, s)
@@ -86,7 +95,7 @@ func (h *Haiken) review(s *Status) error {
 		if err := json.Unmarshal(resBody, &resStat); err != nil {
 			return errors.Wrap(err, "resBody unmarshal err")
 		}
-		if err := h.sendDetail(nodes, resStat.ID); err != nil {
+		if err := h.sendDetail(nodes, "", resStat.ID); err != nil {
 			return errors.Wrap(err, "sendDetail err")
 		}
 	}
@@ -132,16 +141,22 @@ func (h *Haiken) sendReport(nodes []*ikku.Node, songs []*ikku.Song, s *Status) (
 	}
 }
 
-func (h *Haiken) sendDetail(nodes []*ikku.Node, id string) error {
+func (h *Haiken) sendDetail(nodes []*ikku.Node, acct, id string) error {
 	var ds []string
 	for _, node := range nodes {
 		ds = append(ds, fmt.Sprintf("[%s:%d]", node.Pronunciation(), node.PronunciationLength()))
 	}
 	details := strings.Join(ds, ",")
+	if acct != "" {
+		details = fmt.Sprintf("@%s %s", acct, details)
+	}
 	_, err := h.rest.Post(details, id, "俳句解析結果", "unlisted")
 	return err
 }
 
-func (h *Haiken) follow(a *Account) error {
-	return h.rest.Follow(a.ID)
+func (h *Haiken) handleMention(s *Status) error {
+	if strings.Contains(s.Content, "俳句検出を停止してください") {
+		return h.rest.Follow(s.Account.ID, false)
+	}
+	return h.review(s, true)
 }

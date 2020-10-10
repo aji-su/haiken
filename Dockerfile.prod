@@ -1,4 +1,4 @@
-FROM golang:buster
+FROM golang:1.15.2-buster
 EXPOSE 8080
 
 RUN apt-get update \

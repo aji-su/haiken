@@ -86,11 +86,17 @@ func (r *RestClient) Post(status, inReplyToID, spoiler string, visibility Visibi
 	return body, err
 }
 
-func (r *RestClient) Follow(id string) error {
+func (r *RestClient) Follow(id string, follow bool) error {
+	var path string
+	if follow {
+		path = fmt.Sprintf("/api/v1/accounts/%s/follow", id)
+	} else {
+		path = fmt.Sprintf("/api/v1/accounts/%s/unfollow", id)
+	}
 	u := url.URL{
 		Scheme: r.scheme,
 		Host:   r.host,
-		Path:   fmt.Sprintf("/api/v1/accounts/%s/follow", id),
+		Path:   path,
 	}
 	params := url.Values{}
 	params.Set("access_token", r.token)
