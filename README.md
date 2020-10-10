@@ -10,5 +10,5 @@ docker-compose logs -f
 ## testing
 
 ```bash
-make ikku-test
+docker-compose exec app go test -v ./...
 ```
