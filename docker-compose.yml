@@ -6,4 +6,4 @@ services:
     volumes:
       - ".:/app"
     env_file: .env
-
+    command: "sh -c 'go get -u github.com/cosmtrek/air && air'"

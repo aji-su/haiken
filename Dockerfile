@@ -1,5 +1,4 @@
 FROM golang:1.15.2-buster
-EXPOSE 8080
 
 RUN apt-get update \
   && apt-get install --no-install-recommends -y \
@@ -29,8 +28,6 @@ ENV CGO_LDFLAGS="-L/usr/lib/x86_64-linux-gnu -lmecab -lstdc++"
 ENV CGO_CFLAGS="-I/usr/include"
 
 WORKDIR /app
-RUN go get -u github.com/cosmtrek/air
-COPY go.mod go.sum ./
-RUN go mod download
 COPY . ./
-CMD [ "air" ]
+RUN go build -o /app/haiken
+CMD [ "/app/haiken" ]
