@@ -6,6 +6,4 @@ services:
     volumes:
       - ".:/app"
     env_file: .env
-    ports:
-      - "8090:8080"
 

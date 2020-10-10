@@ -1,0 +1,58 @@
+{
+  "containerDefinitions": [
+    {
+      "name": "haiken",
+      "image": "232172376571.dkr.ecr.ap-northeast-1.amazonaws.com/haiken:latest",
+      "essential": true,
+      "environment": [
+        {
+          "name": "MASTODON_HTTP_HOST",
+          "value": "mstdn.f72u.net"
+        },
+        {
+          "name": "MASTODON_WS_HOST",
+          "value": "mstdn.f72u.net"
+        },
+        {
+          "name": "MASTODON_WS_SUBSCRIPTIONS",
+          "value": "[{\"type\":\"subscribe\",\"stream\":\"user\"}]"
+        },
+        {
+          "name": "MASTODON_ALLOWED_TAGS",
+          "value": "frfr"
+        },
+        {
+          "name": "MASTODON_HTTP_SCHEME",
+          "value": "https"
+        },
+        {
+          "name": "MASTODON_WS_SCHEME",
+          "value": "wss"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "MASTODON_ACCESS_TOKEN",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:232172376571:secret:mastodon-8lf0ks"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/haiken",
+          "awslogs-region": "ap-northeast-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ],
+  "family": "haiken",
+  "taskRoleArn": "arn:aws:iam::232172376571:role/haiken",
+  "executionRoleArn": "arn:aws:iam::232172376571:role/haiken",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "256",
+  "memory": "512"
+}
