@@ -103,7 +103,7 @@ func (h *Haiken) review(s *Status, force bool) error {
 		return errors.Wrap(err, "failed to review")
 	}
 	if force && len(songs) < 1 {
-		if err := h.sendDetail(nodes, s.Account.Username, stringP(s.ID), s.Visibility, s.LocalOnly); err != nil {
+		if err := h.sendDetail(nodes, s.Account.Username, s.ID, s.Visibility, s.LocalOnly); err != nil {
 			return errors.Wrap(err, "sendDetail err")
 		}
 	}
@@ -119,7 +119,7 @@ func (h *Haiken) review(s *Status, force bool) error {
 			return errors.Wrap(err, "resBody unmarshal err")
 		}
 		log.Printf("result id: %v", resp.CreatedNote.ID)
-		if err := h.sendDetail(nodes, "", &resp.CreatedNote.ID, s.Visibility, s.LocalOnly); err != nil {
+		if err := h.sendDetail(nodes, s.Account.Username, s.ID, s.Visibility, s.LocalOnly); err != nil {
 			return errors.Wrap(err, "sendDetail err")
 		}
 	}
@@ -169,7 +169,7 @@ func (h *Haiken) sendReport(nodes []*ikku.Node, songs []*ikku.Song, s *Status) (
 	}
 }
 
-func (h *Haiken) sendDetail(nodes []*ikku.Node, username string, replyID *string, visibility string, localOnly bool) error {
+func (h *Haiken) sendDetail(nodes []*ikku.Node, username string, replyID string, visibility string, localOnly bool) error {
 	var ds []string
 	for _, node := range nodes {
 		ds = append(ds, fmt.Sprintf("[%s:%d]", node.Pronunciation(), node.PronunciationLength()))
@@ -178,7 +178,7 @@ func (h *Haiken) sendDetail(nodes []*ikku.Node, username string, replyID *string
 	if username != "" {
 		details = fmt.Sprintf("@%s %s", username, details)
 	}
-	_, err := h.rest.Post(details, replyID, stringP(DetailMessage), visibility, localOnly)
+	_, err := h.rest.Post(details, stringP(replyID), stringP(DetailMessage), visibility, localOnly)
 	return err
 }
 
