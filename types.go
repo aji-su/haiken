@@ -14,7 +14,7 @@ type Status struct {
 	ID         string   `json:"id"`
 	CreatedAt  string   `json:"createdAt"`
 	Text       string   `json:"text"`
-	Cw         string   `json:"cw"`
+	Cw         *string  `json:"cw"`
 	Account    Account  `json:"user"`
 	UserID     string   `json:"userId"`
 	Visibility string   `json:"visibility"` // enum: public home followers specified

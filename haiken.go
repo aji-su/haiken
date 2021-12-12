@@ -150,7 +150,7 @@ func (h *Haiken) sendReport(nodes []*ikku.Node, songs []*ikku.Song, s *Status) (
 
 	report := fmt.Sprintf("『%s』%s", strings.Join(sSongs, "』\n\n『"), tags)
 
-	if s.Cw != "" {
+	if s.Cw != nil {
 		return h.rest.Post(
 			fmt.Sprintf("@%s\n%s", s.Account.Username, report),
 			stringP(s.ID),
