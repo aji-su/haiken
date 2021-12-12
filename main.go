@@ -5,15 +5,15 @@ import (
 	"os"
 
 	"github.com/aji-su/haiken/ikku-go"
+	"github.com/google/uuid"
 )
 
 func main() {
-	hscheme := os.Getenv("MASTODON_HTTP_SCHEME")
-	wsscheme := os.Getenv("MASTODON_WS_SCHEME")
-	hhost := os.Getenv("MASTODON_HTTP_HOST")
-	wshost := os.Getenv("MASTODON_WS_HOST")
-	token := os.Getenv("MASTODON_ACCESS_TOKEN")
-	subscriptions := os.Getenv("MASTODON_WS_SUBSCRIPTIONS")
+	hscheme := os.Getenv("MISSKEY_HTTP_SCHEME")
+	wsscheme := os.Getenv("MISSKEY_WS_SCHEME")
+	hhost := os.Getenv("MISSKEY_HTTP_HOST")
+	wshost := os.Getenv("MISSKEY_WS_HOST")
+	token := os.Getenv("MISSKEY_ACCESS_TOKEN")
 
 	parser, err := ikku.NewParser()
 	if err != nil {
@@ -22,7 +22,7 @@ func main() {
 	defer parser.Destroy()
 	reviewer := ikku.NewReviewer(parser, []int{5, 7, 5})
 
-	stream, err := NewStream(wsscheme, wshost, token, subscriptions)
+	stream, err := NewStream(wsscheme, wshost, token)
 	if err != nil {
 		log.Fatalf("NewStream err: %s", err)
 	}
@@ -33,11 +33,21 @@ func main() {
 	if err != nil {
 		log.Fatalf("VerifyCredentials err: %s", err)
 	}
-	haiken := NewHaiken(reviewer, act, rest, os.Getenv("MASTODON_ALLOWED_TAGS"))
-	stream.SetHandler(haiken)
+	log.Printf("VerifyCredentials: %#v", act)
 
+	var u uuid.UUID
+	u, err = uuid.NewRandom()
 	if err != nil {
-		log.Fatalf("receiver err: %s", err)
+		log.Fatalf("NewRandom err: %s", err)
 	}
-	log.Fatal("stream err: ", stream.Stream())
+	homeStreamID := u.String()
+	u, err = uuid.NewRandom()
+	if err != nil {
+		log.Fatalf("NewRandom err: %s", err)
+	}
+	mainStreamID := u.String()
+
+	haiken := NewHaiken(reviewer, act, rest, os.Getenv("MISSKEY_ALLOWED_TAGS"), homeStreamID, mainStreamID)
+	stream.SetHandler(haiken)
+	log.Fatal("FATAL stream err: ", stream.Stream(homeStreamID, mainStreamID))
 }

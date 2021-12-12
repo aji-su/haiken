@@ -1,38 +1,35 @@
 package main
 
+import "encoding/json"
+
 type Message struct {
-	Event   string   `json:"event"`
-	Payload string   `json:"payload"`
-	Stream  []string `json:"stream"`
+	Body struct {
+		ID   string          `json:"id"`
+		Type string          `json:"type"`
+		Body json.RawMessage `json:"body"`
+	} `json:"body"`
 }
 
 type Status struct {
-	ID          string                 `json:"id"`
-	Account     *Account               `json:"account"`
-	Content     string                 `json:"content"`
-	Visibility  string                 `json:"visibility"`
-	InReplyToID string                 `json:"in_reply_to_id"`
-	Reblog      map[string]interface{} `json:"reblog"`
-	SpoilerText string                 `json:"spoiler_text"`
-	Tags        []*Tag                 `json:"tags"`
-	Mentions    []struct {
-		ID string `json:"id"`
-	} `json:"mentions"`
+	ID         string   `json:"id"`
+	CreatedAt  string   `json:"createdAt"`
+	Text       string   `json:"text"`
+	Cw         string   `json:"cw"`
+	Account    Account  `json:"user"`
+	UserID     string   `json:"userId"`
+	Visibility string   `json:"visibility"` // enum: public home followers specified
+	LocalOnly  bool     `json:"localOnly"`
+	Renote     *Status  `json:"renote"`
+	Mentions   []string `json:"mentions"`
+	Tags       []string `json:"tags"`
 }
 
 type Account struct {
-	ID   string `json:"id"`
-	Acct string `json:"acct"`
+	ID       string `json:"id"`
+	Username string `json:"username"`
 }
 
 type Tag struct {
 	Name string `json:"name"`
 	URL  string `json:"url"`
-}
-
-type Notification struct {
-	ID      string   `json:"id"`
-	Type    string   `json:"type"`
-	Account *Account `json:"account"`
-	Status  *Status  `json:"status"`
 }

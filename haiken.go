@@ -11,78 +11,99 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	FindMessage   = "俳句を発見しました！"
+	DetailMessage = "俳句解析結果"
+	StopMessage   = "俳句検出を停止してください"
+)
+
 type Haiken struct {
-	reviewer   *ikku.Reviewer
-	account    *Account
-	rest       *RestClient
-	allowedTag string
+	reviewer     *ikku.Reviewer
+	account      *Account
+	rest         *RestClient
+	allowedTag   string
+	homeStreamID string
+	mainStreamID string
 }
 
-func NewHaiken(r *ikku.Reviewer, a *Account, rc *RestClient, t string) *Haiken {
+func NewHaiken(r *ikku.Reviewer, a *Account, rc *RestClient, t, h, m string) *Haiken {
 	return &Haiken{
-		reviewer:   r,
-		account:    a,
-		rest:       rc,
-		allowedTag: t,
+		reviewer:     r,
+		account:      a,
+		rest:         rc,
+		allowedTag:   t,
+		homeStreamID: h,
+		mainStreamID: m,
 	}
 }
 
 func (h *Haiken) Handle(message []byte) error {
 	var m Message
 	if err := json.Unmarshal(message, &m); err != nil {
+		log.Printf("failed to unmarshal message: %s", message)
 		return err
 	}
-	switch m.Event {
-	case "update":
+	switch m.Body.ID {
+	case h.homeStreamID:
 		var s *Status
-		if err := json.Unmarshal([]byte(m.Payload), &s); err != nil {
+		if err := json.Unmarshal([]byte(m.Body.Body), &s); err != nil {
 			return err
 		}
 		if s.Account.ID == h.account.ID {
 			log.Printf("skip own post")
 			return nil
 		}
-		if s.Reblog != nil {
+		if s.Renote != nil {
 			log.Printf("skip reblog")
 			return nil
 		}
-		if s.Visibility != "public" && s.Visibility != "unlisted" {
+		for _, id := range s.Mentions {
+			if id == h.account.ID {
+				if err := h.handleMention(s); err != nil {
+					log.Printf("failed to handle mention: %v, message=%#v", err, m)
+				}
+				return nil
+			}
+		}
+		if s.Visibility != "public" && s.Visibility != "home" {
 			log.Printf("skip private post")
 			return nil
 		}
-		for _, m := range s.Mentions {
-			if m.ID == h.account.ID {
-				return h.handleMention(s)
-			}
-		}
 		if err := h.review(s, false); err != nil {
-			return errors.Wrap(err, "review err")
+			log.Printf("review err: %v, message=%#v", err, m)
+			return nil
 		}
-	case "notification":
-		var p *Notification
-		if err := json.Unmarshal([]byte(m.Payload), &p); err != nil {
+	case h.mainStreamID:
+		if m.Body.Type != "followed" {
+			log.Printf("Ignoring unknown type: %s", m.Body.Type)
+			return nil
+		}
+		var a *Account
+		if err := json.Unmarshal([]byte(m.Body.Body), &a); err != nil {
+			log.Printf("failed to unmarshal account: %s, message=%#v", m.Body.Body, m)
 			return err
 		}
-		if p.Type == "follow" {
-			if err := h.rest.Follow(p.Account.ID, true); err != nil {
-				return errors.Wrap(err, "follow err")
-			}
+		log.Printf("Followed by the account: %#v", a)
+		if err := h.rest.Follow(a.ID, true); err != nil {
+			log.Printf("failed to follow account: %s, message=%#v", m.Body.Body, m)
+			return nil
 		}
-	case "delete":
 	default:
-		return errors.Errorf("unknown event: %s", string(message))
+		log.Printf("Unknown streamID: %s, message=%#v", m.Body.ID, m)
+		return nil
 	}
 	return nil
 }
 
 func (h *Haiken) review(s *Status, force bool) error {
-	con := strip.StripTags(s.Content)
+	log.Printf("reviewing: %#v", s)
+	con := strip.StripTags(s.Text)
 	nodes, songs, err := h.reviewer.Search(con)
 	if err != nil {
 		return errors.Wrap(err, "failed to review")
 	}
 	if force && len(songs) < 1 {
-		if err := h.sendDetail(nodes, s.Account.Acct, s.ID); err != nil {
+		if err := h.sendDetail(nodes, s.Account.Username, stringP(s.ID), s.LocalOnly); err != nil {
 			return errors.Wrap(err, "sendDetail err")
 		}
 	}
@@ -91,11 +112,14 @@ func (h *Haiken) review(s *Status, force bool) error {
 		if err != nil {
 			return errors.Wrap(err, "sendReport err")
 		}
-		var resStat *Status
-		if err := json.Unmarshal(resBody, &resStat); err != nil {
+		var resp struct {
+			CreatedNote *Status `json:"createdNote"`
+		}
+		if err := json.Unmarshal(resBody, &resp); err != nil {
 			return errors.Wrap(err, "resBody unmarshal err")
 		}
-		if err := h.sendDetail(nodes, "", resStat.ID); err != nil {
+		log.Printf("result id: %v", resp.CreatedNote.ID)
+		if err := h.sendDetail(nodes, "", nil, s.LocalOnly); err != nil {
 			return errors.Wrap(err, "sendDetail err")
 		}
 	}
@@ -118,45 +142,53 @@ func (h *Haiken) sendReport(nodes []*ikku.Node, songs []*ikku.Song, s *Status) (
 
 	var tags string
 	for _, tag := range s.Tags {
-		if tag.Name == h.allowedTag {
-			tags = " #" + tag.Name
+		if tag == h.allowedTag {
+			tags = " #" + tag
 			break
 		}
 	}
 
 	report := fmt.Sprintf("『%s』%s", strings.Join(sSongs, "』\n\n『"), tags)
 
-	if s.SpoilerText != "" {
+	if s.Cw != "" {
 		return h.rest.Post(
-			fmt.Sprintf("@%s\n%s", s.Account.Acct, report),
-			s.ID,
-			"俳句を発見しました！",
-			s.Visibility)
+			fmt.Sprintf("@%s\n%s", s.Account.Username, report),
+			stringP(s.ID),
+			stringP(FindMessage),
+			s.Visibility,
+			s.LocalOnly,
+		)
 	} else {
 		return h.rest.Post(
-			fmt.Sprintf("@%s 俳句を発見しました！\n%s", s.Account.Acct, report),
-			s.ID,
-			"",
-			s.Visibility)
+			fmt.Sprintf("@%s %s\n%s", s.Account.Username, FindMessage, report),
+			stringP(s.ID),
+			nil,
+			s.Visibility,
+			s.LocalOnly,
+		)
 	}
 }
 
-func (h *Haiken) sendDetail(nodes []*ikku.Node, acct, id string) error {
+func (h *Haiken) sendDetail(nodes []*ikku.Node, username string, replyID *string, localOnly bool) error {
 	var ds []string
 	for _, node := range nodes {
 		ds = append(ds, fmt.Sprintf("[%s:%d]", node.Pronunciation(), node.PronunciationLength()))
 	}
 	details := strings.Join(ds, ",")
-	if acct != "" {
-		details = fmt.Sprintf("@%s %s", acct, details)
+	if username != "" {
+		details = fmt.Sprintf("@%s %s", username, details)
 	}
-	_, err := h.rest.Post(details, id, "俳句解析結果", "unlisted")
+	_, err := h.rest.Post(details, replyID, stringP(DetailMessage), "home", localOnly)
 	return err
 }
 
 func (h *Haiken) handleMention(s *Status) error {
-	if strings.Contains(s.Content, "俳句検出を停止してください") {
+	if strings.Contains(s.Text, StopMessage) {
 		return h.rest.Follow(s.Account.ID, false)
 	}
 	return h.review(s, true)
+}
+
+func stringP(s string) *string {
+	return &s
 }
