@@ -119,7 +119,7 @@ func (h *Haiken) review(s *Status, force bool) error {
 			return errors.Wrap(err, "resBody unmarshal err")
 		}
 		log.Printf("result id: %v", resp.CreatedNote.ID)
-		if err := h.sendDetail(nodes, "", nil, s.LocalOnly); err != nil {
+		if err := h.sendDetail(nodes, "", &resp.CreatedNote.ID, s.LocalOnly); err != nil {
 			return errors.Wrap(err, "sendDetail err")
 		}
 	}
