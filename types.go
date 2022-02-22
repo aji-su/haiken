@@ -25,8 +25,9 @@ type Status struct {
 }
 
 type Account struct {
-	ID       string `json:"id"`
-	Username string `json:"username"`
+	ID       string  `json:"id"`
+	Username string  `json:"username"`
+	Host     *string `json:"host"`
 }
 
 type Tag struct {

@@ -152,7 +152,7 @@ func (h *Haiken) sendReport(nodes []*ikku.Node, songs []*ikku.Song, s *Status) (
 
 	if s.Cw != nil {
 		return h.rest.Post(
-			fmt.Sprintf("@%s\n%s", s.Account.Username, report),
+			message(s.Account.Username, s.Account.Host, report),
 			stringP(s.ID),
 			stringP(FindMessage),
 			s.Visibility,
@@ -160,13 +160,20 @@ func (h *Haiken) sendReport(nodes []*ikku.Node, songs []*ikku.Song, s *Status) (
 		)
 	} else {
 		return h.rest.Post(
-			fmt.Sprintf("@%s %s\n%s", s.Account.Username, FindMessage, report),
+			message(s.Account.Username, s.Account.Host, fmt.Sprintf("%s\n%s", FindMessage, report)),
 			stringP(s.ID),
 			nil,
 			s.Visibility,
 			s.LocalOnly,
 		)
 	}
+}
+
+func message(username string, host *string, message string) string {
+	if host == nil {
+		return fmt.Sprintf("@%s\n%s", username, message)
+	}
+	return fmt.Sprintf("@%s@%s\n%s", username, *host, message)
 }
 
 func (h *Haiken) sendDetail(nodes []*ikku.Node, username string, replyID string, visibility string, localOnly bool) error {
