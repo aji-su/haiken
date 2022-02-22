@@ -1,4 +1,4 @@
-FROM golang:1.15.2-buster
+FROM golang:1.17-buster
 
 RUN apt-get update \
   && apt-get install --no-install-recommends -y \
