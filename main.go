@@ -47,7 +47,7 @@ func main() {
 	}
 	mainStreamID := u.String()
 
-	haiken := NewHaiken(reviewer, act, rest, os.Getenv("MISSKEY_ALLOWED_TAGS"), homeStreamID, mainStreamID)
+	haiken := NewHaiken(reviewer, act, rest, homeStreamID, mainStreamID)
 	stream.SetHandler(haiken)
 	log.Fatal("FATAL stream err: ", stream.Stream(homeStreamID, mainStreamID))
 }

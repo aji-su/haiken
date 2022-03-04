@@ -29,8 +29,3 @@ type Account struct {
 	Username string  `json:"username"`
 	Host     *string `json:"host"`
 }
-
-type Tag struct {
-	Name string `json:"name"`
-	URL  string `json:"url"`
-}

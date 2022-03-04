@@ -14,10 +14,6 @@
           "value": "mk.f72u.net"
         },
         {
-          "name": "MISSKEY_ALLOWED_TAGS",
-          "value": "frfr"
-        },
-        {
           "name": "MISSKEY_HTTP_SCHEME",
           "value": "https"
         },

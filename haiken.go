@@ -21,17 +21,15 @@ type Haiken struct {
 	reviewer     *ikku.Reviewer
 	account      *Account
 	rest         *RestClient
-	allowedTag   string
 	homeStreamID string
 	mainStreamID string
 }
 
-func NewHaiken(r *ikku.Reviewer, a *Account, rc *RestClient, t, h, m string) *Haiken {
+func NewHaiken(r *ikku.Reviewer, a *Account, rc *RestClient, h, m string) *Haiken {
 	return &Haiken{
 		reviewer:     r,
 		account:      a,
 		rest:         rc,
-		allowedTag:   t,
 		homeStreamID: h,
 		mainStreamID: m,
 	}
@@ -140,15 +138,7 @@ func (h *Haiken) sendReport(nodes []*ikku.Node, songs []*ikku.Song, s *Status) (
 		sSongs = append(sSongs, strings.Join(s, " "))
 	}
 
-	var tags string
-	for _, tag := range s.Tags {
-		if tag == h.allowedTag {
-			tags = " #" + tag
-			break
-		}
-	}
-
-	report := fmt.Sprintf("『%s』%s", strings.Join(sSongs, "』\n\n『"), tags)
+	report := fmt.Sprintf("『%s』", strings.Join(sSongs, "』\n\n『"))
 
 	if s.Cw != nil {
 		return h.rest.Post(
