@@ -67,7 +67,7 @@ func (r *RestClient) Post(text string, replyID *string, cw *string, visibility s
 	if err != nil {
 		return nil, err
 	}
-
+	log.Printf("Sending: %s", p)
 	resp, err := http.Post(
 		u.String(),
 		"application/json",
