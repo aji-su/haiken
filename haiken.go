@@ -12,9 +12,10 @@ import (
 )
 
 const (
-	FindMessage   = "俳句を発見しました！"
-	DetailMessage = "俳句解析結果"
-	StopMessage   = "俳句検出を停止してください"
+	FindMessage    = "俳句を発見しました！"
+	DetailMessage  = "俳句解析結果"
+	StopMessage    = "俳句検出を停止してください"
+	VisibilityHome = "home"
 )
 
 type Haiken struct {
@@ -145,7 +146,7 @@ func (h *Haiken) sendReport(nodes []*ikku.Node, songs []*ikku.Song, s *Status) (
 			message(s.Account.Username, s.Account.Host, report),
 			stringP(s.ID),
 			stringP(FindMessage),
-			s.Visibility,
+			VisibilityHome,
 			s.LocalOnly,
 		)
 	} else {
@@ -153,7 +154,7 @@ func (h *Haiken) sendReport(nodes []*ikku.Node, songs []*ikku.Song, s *Status) (
 			message(s.Account.Username, s.Account.Host, fmt.Sprintf("%s\n%s", FindMessage, report)),
 			stringP(s.ID),
 			nil,
-			s.Visibility,
+			VisibilityHome,
 			s.LocalOnly,
 		)
 	}
